@@ -24,7 +24,7 @@ setup(
     description=("submit jobs to slurm with python"),
     license="MIT",
     keywords="cluster slurmpy",
-    url="https://github.com/brentp/slurmpy",
+    url="https://github.com/salotz/slurmpy",
     packages=['slurmpy'],
     long_description=open('README.md').read(),
     classifiers=[

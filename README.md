@@ -1,6 +1,8 @@
+* Slurmpy
+
 quick and dirty lib for submitting jobs to slurm via python2/python3.
 
-```Python
+#+BEGIN_SRC: python
 from slurmpy import Slurm
 
 s = Slurm("job-name", {"account": "my-account", "partition": "my-parition"})
@@ -11,33 +13,42 @@ of
 stuff
 """)
 
-```
+#+END_SRC
 
-The above will submit the job to `sbatch` automatically write the script to `scripts/`
-and automatically write logs/{name}.err and logs/{name}.out. It will have today's
-date in the log and script names.
+The above will submit the job to ~sbatch~ automatically write the
+script to ~scripts/~ and automatically write logs/{name}.err and
+logs/{name}.out. It will have today's date in the log and script
+names.
 
-The script to run() can also contain `$variables` which are filled with the cmd_kwarg dict.
-E.g. `echo $name` could be filled with `cmd_kwargs={'name': 'sally'}`
+The script to run() can also contain ~$variables~ which are filled
+with the cmd_kwarg dict.  E.g. ~echo $name~ could be filled with
+~cmd_kwargs={'name': 'sally'}~
 
-A command can be tested (not sent to queue) by setting the `_cmd` are to `run` as e.g. "ls".
-The default is `sbatch` which submits jobs to slurm.
+A command can be tested (not sent to queue) by setting the ~_cmd~ are
+to ~run~ as e.g. "ls".
 
-Dependencies
-============
+The default is ~sbatch~ which submits jobs to slurm.
 
-Each time `slurmpy.Slurm().run()` is called, it returns the job-id of the submitted job. This
-can then be sent to a subsequent job:
-```
+** Dependencies
+
+
+Each time ~slurmpy.Slurm().run()~ is called, it returns the job-id of
+the submitted job. This can then be sent to a subsequent job:
+
+#+BEGIN_SRC: python
+
 s = Slurmp()
 s.run(..., depends_on=[job_id])
 
-```
-to indicate that this job should not run until the the job with `job_id` has finished successfully.
+#+END_SRC
 
-Install
-=======
+To indicate that this job should not run until the the job with
+~job_id~ has finished successfully.
 
-```Shell
-pip install slurmpy --user
-```
+** Install
+
+#+BEGIN_SRC: python
+
+pip install -e .
+
+#+END_SRC
