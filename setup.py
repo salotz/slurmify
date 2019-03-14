@@ -1,31 +1,27 @@
+#!/usr/bin/env python
+# -*- encoding: utf-8 -*-
+from __future__ import absolute_import
+from __future__ import print_function
+
+import re
+from glob import glob
+from os.path import basename
+from os.path import dirname
+from os.path import join
+from os.path import splitext
+
 from setuptools import setup, find_packages
 
-def get_version(path):
-    """Get the version info from the mpld3 package without importing it"""
-    import ast
-
-    with open(path) as init_file:
-        module = ast.parse(init_file.read())
-
-    version = (ast.literal_eval(node.value) for node in ast.walk(module)
-               if isinstance(node, ast.Assign)
-               and node.targets[0].id == "__version__")
-    try:
-        return next(version)
-    except StopIteration:
-        raise ValueError("version could not be located")
-
-
 setup(
+    # package metadata
     name="slurmpy",
-    version=get_version("slurmpy/__init__.py"),
+    version="0.1-a",
     author="Samuel D. Lotz",
     author_email="samuel.lotz@salotz.info",
     description=("Submit jobs to slurm with python."),
     license="MIT",
     keywords="cluster slurmpy",
     url="https://github.com/salotz/slurmpy",
-    packages=['slurmpy'],
     long_description=open('README.md').read(),
     classifiers=[
         "Development Status :: 3 - Alpha",
@@ -34,11 +30,20 @@ setup(
         'Programming Language :: Python :: 2',
         'Programming Language :: Python :: 3'
     ],
-    package_dir={'slurmpy' : 'slurmpy'},
-    packages=find_packages(),
-    package_data={'slurmpy' : ['templates/*']},
-    include_package_data=True,
+    # building/dev
+    setup_requires=['pytest-runner'],
+    tests_require=['pytest', 'tox'],
+    # package
+    packages=['slurmpy'],
+    package_dir={'slurmpy' : 'src/slurmpy'},
+    # if this is true then the package_data won't be included in the
+    # dist, and I prefer this to MANIFEST
+    include_package_data=False,
+    package_data={'slurmpy' : ['templates/*.j2']},
+    entry_points={
+        'console_scripts': ['slurmpy = slurmpy.cli:main']
+        },
     install_requires=[
-        'jinja2'
+        'jinja2',
     ],
 )
