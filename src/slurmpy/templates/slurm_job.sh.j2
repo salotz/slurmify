@@ -1,0 +1,6 @@
+#!/bin/bash {% if login_shell %} -login {% endif %}
+
+#SBATCH -e {{ stderr_log_dir }}/{{ job_name }}.%J.err
+#SBATCH -o {{ stdout_log_dir }}/{{ job_name }}.%J.out
+#SBATCH -J {{ job_name }}
+

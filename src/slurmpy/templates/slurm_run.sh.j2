@@ -1,0 +1,34 @@
+#SBATCH --time={{ walltime }}
+#SBATCH --nodes={{ nodes }}
+#SBATCH --ntasks={{ ntasks }}
+#SBATCH --cpus-per-task={{ cpus_per_task }}
+{% if mem_per_cpu %}
+#SBATCH --mem-per-cpu={{ mem_per_cpu }}
+{% else %}{% endif %}
+{% if node_mem %}
+#SBATCH --mem={{ node_mem }}
+{% else %}{% endif %}
+{% if nodelist %}
+#SBATCH --mem={{ nodelist }}
+{% else %}{% endif %}
+{% if mail_user %}
+#SBATCH --mail-user={{ mail_user }}
+{% else %}{% endif %}
+{% if mail_type %}
+#SBATCH --mail-type={{ mail_type }}
+{% else %}{% endif %}
+{% if constraint %}
+#SBATCH --constraint {{ constraint }}
+{% else %}{% endif %}
+{% if gres %}
+#SBATCH --gres={{ gres }}
+{% else %}{% endif %}
+{% if chdir %}
+#SBATCH --chdir={{ chdir }}
+{% else %}{% endif %}
+{% if prolog %}
+#SBATCH --prolog={{ prolog }}
+{% else %}{% endif %}
+{% if epilog %}
+#SBATCH --epilog={{ epilog }}
+{% else %}{% endif %}

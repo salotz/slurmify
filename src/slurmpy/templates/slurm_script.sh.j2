@@ -1,0 +1,10 @@
+{{ slurm_job }}
+{{ slurm_run }}
+
+{{ setup }}
+
+{% for command in commands %}
+srun {{ command }}
+{% endfor %}
+
+{{ teardown}}
