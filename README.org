@@ -1,17 +1,14 @@
+WARNING WORK IN PROGRESS!!
+
 * Slurmpy
 
-quick and dirty lib for submitting jobs to slurm via python2/python3.
+Tool for submitting jobs to slurm via python2/python3.
 
 #+BEGIN_SRC: python
-from slurmpy import Slurm
+from slurmpy.slurmpy import Slurm
 
-s = Slurm("job-name", {"account": "my-account", "partition": "my-parition"})
-s.run("""
-do
-lots
-of
-stuff
-""")
+s = Slurm("test-job", {'time' : "100"})
+s.run("ls; sleep 10;")
 
 #+END_SRC
 
@@ -29,26 +26,20 @@ to ~run~ as e.g. "ls".
 
 The default is ~sbatch~ which submits jobs to slurm.
 
-** Dependencies
-
-
-Each time ~slurmpy.Slurm().run()~ is called, it returns the job-id of
-the submitted job. This can then be sent to a subsequent job:
-
-#+BEGIN_SRC: python
-
-s = Slurmp()
-s.run(..., depends_on=[job_id])
-
-#+END_SRC
-
-To indicate that this job should not run until the the job with
-~job_id~ has finished successfully.
-
 ** Install
 
 #+BEGIN_SRC: python
 
 pip install -e .
 
+#+END_SRC
+
+
+* Develop
+
+
+** Tests
+
+#+BEGIN_SRC bash
+tox
 #+END_SRC

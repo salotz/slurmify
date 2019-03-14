@@ -34,15 +34,16 @@ setup(
     setup_requires=['pytest-runner'],
     tests_require=['pytest', 'tox'],
     # package
-    packages=['slurmpy'],
-    package_dir={'slurmpy' : 'src/slurmpy'},
+    packages=find_packages('src'),
+    #packages=['slurmpy'],
+    package_dir={'' : 'src'},
     # if this is true then the package_data won't be included in the
     # dist, and I prefer this to MANIFEST
     include_package_data=False,
     package_data={'slurmpy' : ['templates/*.j2']},
-    entry_points={
-        'console_scripts': ['slurmpy = slurmpy.cli:main']
-        },
+    # entry_points={
+    #     'console_scripts': ['slurmpy = slurmpy.cli:main']
+    #     },
     install_requires=[
         'jinja2',
     ],
