@@ -1,0 +1,22 @@
+#!/bin/bash {% if login_shell %} -login {% endif %}
+
+#SBATCH -e {{ stderr_log_dir }}/{{ job_name }}.%J.err
+#SBATCH -o {{ stdout_log_dir }}/{{ job_name }}.%J.out
+#SBATCH -J {job_name}
+#SBATCH --time={{ walltime }}
+#SBATCH --nodes={{ nodes }}
+#SBATCH --ntasks={{ ntasks }}
+#SBATCH --cpus-per-task={{ cpus_per_task }}
+#SBATCH --mem-per-cpu={{ mem_per_cpu }}
+{% if mail_user %} 
+#SBATCH --mail-user={{ mail_user }}
+{% else %}{% endif %}
+{% if mail_type %} 
+#SBATCH --mail-type={{ mail_type }}
+{% else %}{% endif %}
+{% if constraint %} 
+#SBATCH --constraint {{ constraint }}
+{% else %}{% endif %}
+{% if gres %} 
+#SBATCH --gres={{ gres }}
+{% else %}{% endif %}

@@ -1,4 +1,4 @@
-from setuptools import setup
+from setuptools import setup, find_packages
 
 def get_version(path):
     """Get the version info from the mpld3 package without importing it"""
@@ -19,9 +19,9 @@ def get_version(path):
 setup(
     name="slurmpy",
     version=get_version("slurmpy/__init__.py"),
-    author="Brent Pedersen",
-    author_email="bpederse@gmail.com",
-    description=("submit jobs to slurm with python"),
+    author="Samuel D. Lotz",
+    author_email="samuel.lotz@salotz.info",
+    description=("Submit jobs to slurm with python."),
     license="MIT",
     keywords="cluster slurmpy",
     url="https://github.com/salotz/slurmpy",
@@ -33,5 +33,12 @@ setup(
         "License :: OSI Approved :: MIT License",
         'Programming Language :: Python :: 2',
         'Programming Language :: Python :: 3'
+    ],
+    package_dir={'slurmpy' : 'slurmpy'},
+    packages=find_packages(),
+    package_data={'slurmpy' : ['templates/*']},
+    include_package_data=True,
+    install_requires=[
+        'jinja2'
     ],
 )
