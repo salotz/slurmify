@@ -6,3 +6,6 @@ build
 scripts/
 logs/
 *~
+.tox
+.eggs
+
