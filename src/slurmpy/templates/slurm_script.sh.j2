@@ -3,8 +3,6 @@
 
 {{ setup }}
 
-{% for command in commands %}
-srun {{ command }}
-{% endfor %}
+{{ payload }}
 
 {{ teardown}}

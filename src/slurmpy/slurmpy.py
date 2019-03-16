@@ -1,21 +1,21 @@
-import pkg_resources
 import os
 import os.path as osp
+import tempfile
+import subprocess
 
 from jinja2 import Environment, FileSystemLoader
 
 from slurmpy import TEMPLATES_PATH
 
-
-
 # names of the templates
 SLURM_JOB_TEMPLATE = "slurm_job.sh.j2"
-SLURM_RUN_TEMPLATE = "slurm_job.sh.j2"
-SLURM_SCRIPT_TEMPLATE = "slurm_job.sh.j2"
+SLURM_RUN_TEMPLATE = "slurm_run.sh.j2"
+SLURM_SCRIPT_TEMPLATE = "slurm_script.sh.j2"
+SLURM_COMMANDS_TEMPLATE = "slurm_commands.sh.j2"
 
 # list of all the templates
 SLURM_TEMPLATE_NAMES = (SLURM_JOB_TEMPLATE, SLURM_RUN_TEMPLATE,
-                        SLURM_SCRIPT_TEMPLATE)
+                        SLURM_SCRIPT_TEMPLATE, SLURM_COMMANDS_TEMPLATE)
 
 # the names of the targets and whether or not they are optional (True)
 # or not (False). This is from the perspective of the template and not
@@ -34,7 +34,7 @@ SLURM_RUN_TARGETS = (
     ('walltime', False),
     ('nodes', False),
     ('ntasks', False),
-    ('cpus-per-task', False),
+    ('cpus_per_task', False),
     ('mem_per_cpu', True),
     ('node_mem', True),
     ('nodelist', True),
@@ -44,11 +44,15 @@ SLURM_RUN_TARGETS = (
 )
 
 SLURM_SCRIPT_TARGETS = (
-    ('slurm_job', True),
-    ('slurm_run', True),
+    ('slurm_job', False),
+    ('slurm_run', False),
     ('setup', True),
-    ('payload', True),
+    ('payload', False),
     ('teardown', True),
+)
+
+SLURM_COMMANDS_TARGETS = (
+    ('commands', False)
 )
 
 # Defaults
@@ -96,17 +100,30 @@ class SlurmJob():
 
         # check to make sure all arguments work
         if len(check_kwargs(SLURM_JOB_TARGETS, self.job_kwargs)) < 1:
-            self.job_header = job_template.render(self.job_kwargs)
+            self._job_header = job_template.render(self.job_kwargs)
         else:
             raise ValueError
 
         # get default setup and teardown scripts
-        self.setup = ""
-        self.teardown = ""
+        self._setup = ""
+        self._teardown = ""
 
-    def run(run_kwargs, commands):
+    @property
+    def job_header(self):
+        return self._job_header
+
+    @property
+    def setup(self):
+        return self._setup
+
+    @property
+    def teardown(self):
+        return self._teardown
+
+    def run(self, run_kwargs, commands):
 
         run_template = self.env.get_template(SLURM_RUN_TEMPLATE)
+        commands_template = self.env.get_template(SLURM_COMMANDS_TEMPLATE)
         script_template = self.env.get_template(SLURM_SCRIPT_TEMPLATE)
 
         if len(check_kwargs(SLURM_RUN_TARGETS, run_kwargs)) < 1:
@@ -114,20 +131,45 @@ class SlurmJob():
         else:
             raise ValueError
 
+        payload = commands_template.render(commands=commands)
 
         script_kwargs = {
             'slurm_job' : self.job_header,
             'slurm_run' : run_header,
             'setup' : self.setup,
-            'commands' : commands,
+            'payload' : payload,
             'teardown' : self.teardown
         }
 
         if len(check_kwargs(SLURM_SCRIPT_TARGETS, script_kwargs)) < 1:
-            script = run_template.render(script_kwargs)
+            script_str = script_template.render(script_kwargs)
         else:
             raise ValueError
 
+        # make a temporary file for the script and use sbatch to
+        # submit it
 
-        # then actually submit the script
-        subprocess.run(['sbatch', ], )
+        with tempfile.NamedTemporaryFile() as tmpfile:
+
+            # write the script to the tempfile
+            tmpfile.write(str.encode(script_str))
+
+            # set the file pointer back to the beginning of the file
+            # so we don't have to reopen it
+            tmpfile.seek(0)
+
+            # the path to the temp file
+            tmpfile_path = tmpfile.name
+
+            # then actually submit the script and get the return
+            # values
+            complete_process = subprocess.run(['sbatch', tmpfile_path])
+
+            # if there was error get it:
+            if complete_process.stderr is not None:
+                pass
+
+            # get the jobid from stdout
+            #complete_process.stdout
+
+        return 0, complete_process

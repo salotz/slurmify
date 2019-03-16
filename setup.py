@@ -22,7 +22,7 @@ setup(
     license="MIT",
     keywords="cluster slurmpy",
     url="https://github.com/salotz/slurmpy",
-    long_description=open('README.md').read(),
+    long_description=open('README.org').read(),
     classifiers=[
         "Development Status :: 3 - Alpha",
         "Topic :: Utilities",
@@ -41,10 +41,13 @@ setup(
     # dist, and I prefer this to MANIFEST
     include_package_data=False,
     package_data={'slurmpy' : ['templates/*.j2']},
-    # entry_points={
-    #     'console_scripts': ['slurmpy = slurmpy.cli:main']
-    #     },
+    entry_points={
+        'console_scripts': ['slurmpy = slurmpy.cli:cli']
+        },
     install_requires=[
         'jinja2',
+        'click',
+        'toml',
+        'colorama'
     ],
 )
