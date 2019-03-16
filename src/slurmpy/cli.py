@@ -1,3 +1,4 @@
+import os
 import os.path as osp
 from copy import copy
 
@@ -73,9 +74,43 @@ def _normalize_template_kwargs(run_kwargs):
 @click.option('--memory', default=None)
 @click.option('--num_cpus', default=None)
 @click.option('--num_gpus', default=None)
+@click.option('--command', default=None)
+@click.option('--script-in', type=click.Path(exists=True, dir_okay=False),
+              default=None)
+@click.option('--script-out', type=click.Path(exists=False, dir_okay=False),
+              default=None)
+@click.option('--batch-in', type=click.Path(exists=True, file_okay=False),
+              default=None)
+@click.option('--batch-out', type=click.Path(exists=False, file_okay=False),
+              default=None)
 @click.argument('job_name')
-@click.argument('command')
-def slurmify(config, constraint, walltime, memory, num_cpus, num_gpus, job_name, command):
+def slurmify(config, constraint, walltime, memory, num_cpus, num_gpus,
+             command, script_in, script_out, batch_in, batch_out,
+             job_name):
+
+    # check to make sure we have inputs to slurmify
+
+    # if we have ins and outs for the batch we need both in and out
+    # targets
+    batch_ok = False
+    if (batch_in is not None) and (batch_out is not None):
+        batch_ok = True
+
+    # can do one of: command, script, or batch
+    options_selected = (True if command is not None else False,
+                        True if script_in is not None else False,
+                        True if batch_ok else False)
+
+    num_selected = len([() for option
+                        in options_selected
+                        if option])
+    if num_selected > 1:
+        raise ValueError("Choose only one input option: command, script, or batch")
+
+    # if only one is chosen then figure which one
+    option_idxs = ('command', 'script', 'batch')
+    option_selected = option_idxs[[i for i, sel in enumerate(options_selected)
+                                   if sel][0]]
 
     # load the config file
     if config is not None:
@@ -97,8 +132,6 @@ def slurmify(config, constraint, walltime, memory, num_cpus, num_gpus, job_name,
 
         if option is not None:
             run_kwargs[opt_key] = option
-
-    print(run_kwargs)
 
     run_kwargs = _apply_run_defaults(run_kwargs)
 
@@ -124,20 +157,80 @@ def slurmify(config, constraint, walltime, memory, num_cpus, num_gpus, job_name,
     # render the run options header
     run_header = run_template.render(**run_kwargs)
 
-    # render the commands for the payload
-    payload = commands_template.render(commands=[command])
 
-    # get the script kwargs
-    script_kwargs = {'slurm_job' : job_header,
-                     'slurm_run' : run_header,
-                     'setup' : setup,
-                     'payload' : payload,
-                     'teardown' : teardown}
+    # generate the payloads depending on the type of input: command,
+    # script, batch
 
-    # render the script
-    script_str = script_template.render(**script_kwargs)
+    # this is used for batch
+    in_names = []
 
-    click.echo(script_str)
+    if option_selected == 'command':
+        # render the commands for the payload
+        payloads = [commands_template.render(commands=[command])]
+
+    elif option_selected == 'script':
+
+        # read the script
+        with open(script_in, 'r') as rf:
+            script = rf.read()
+
+        # and set it as the payload without adding sruns like we do
+        # for command
+        payloads = [script]
+
+    elif option_selected == 'batch':
+
+        # just generate a script payload for everything in the batch
+        # dir
+        payloads = []
+        for script_file in os.listdir(batch_in):
+
+            in_path = osp.join(batch_in, script_file)
+
+            with open(in_path, 'r') as rf:
+                script = rf.read()
+
+            payloads.append(script)
+            in_names.append(script_file)
+
+    scripts = []
+    for payload in payloads:
+
+        # get the script kwargs
+        script_kwargs = {'slurm_job' : job_header,
+                         'slurm_run' : run_header,
+                         'setup' : setup,
+                         'payload' : payload,
+                         'teardown' : teardown}
+
+        # render the script
+        script = script_template.render(**script_kwargs)
+
+        scripts.append(script)
+
+    # choose how to output the files
+    if option_selected == 'batch' and batch_out:
+
+        # first make sure the batch_out dir is there
+        os.makedirs(batch_out, exist_ok=True)
+
+        for i, script in enumerate(scripts):
+            # get the path to save the script
+            out_name = "{}.slurm".format(in_names[i])
+            out_path = osp.join(batch_out, out_name)
+
+            # write it
+            with open(out_path, 'w') as wf:
+                wf.write(script)
+
+    # we write out the script from either command or script in
+    elif script_out is not None:
+        with open(script_out, 'w') as wf:
+            wf.write(scripts[0])
+
+    # otherwise just send it out
+    else:
+        click.echo(scripts[0])
 
 @click.command()
 @click.argument('walltime')
