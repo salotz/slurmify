@@ -226,7 +226,7 @@ def slurmify(config, epilog, constraint, walltime, memory, num_cpus, num_gpus,
     if option_selected == 'command':
         # render the commands for the payload
         payloads = [commands_template.render(commands=[command],
-                                             epilog=epilog)]
+                                             epilog=context_kwargs['epilog'])]
 
     elif option_selected == 'script':
 
@@ -252,8 +252,9 @@ def slurmify(config, epilog, constraint, walltime, memory, num_cpus, num_gpus,
 
             # otherwise just treat it like a command
             else:
+
                 payloads = [commands_template.render(commands=[script_in],
-                                                    epilog=epilog)]
+                                                     epilog=context_kwargs['epilog'])]
 
                 # since we are not embedding it we want to copy that
                 # script to the execution environmen at runtime, so we
@@ -263,6 +264,8 @@ def slurmify(config, epilog, constraint, walltime, memory, num_cpus, num_gpus,
                                                **setup_kwargs, **context_kwargs)]
                 teardowns = [teardown_template.render(task_script=script_in,
                                                      **teardown_kwargs, **context_kwargs)]
+
+
 
 
     elif option_selected == 'batch':
@@ -289,7 +292,7 @@ def slurmify(config, epilog, constraint, walltime, memory, num_cpus, num_gpus,
             # otherwise just treat it like a command
             else:
                 payload = commands_template.render(commands=[in_path],
-                                                   epilog=epilog)
+                                                   epilog=context_kwargs['epilog'])
 
                 # since we are not embedding it we want to copy that
                 # script to the execution environmen at runtime, so we

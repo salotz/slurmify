@@ -17,6 +17,14 @@ goal_dir="{{ goal_dir_path }}"
 
 # the directory with all of the input
 inputdir=${goal_dir}/input
+
+# the directory with the logs
+logsdir=${goal_dir}/logs
+
+# the individual log files
+stdout="${logsdir}/${SLURM_JOB_NAME}.${SLURM_JOB_ID}.out"
+stderr="${logsdir}/${SLURM_JOB_NAME}.${SLURM_JOB_ID}.err"
+
 # directory to put job results in
 jobsdir=${goal_dir}/jobs
 
@@ -42,9 +50,20 @@ execdir={{ exec_dir }}/${jobname}
 execdir=${jobdir}
 {% endif %}
 
+# export the execution directory and the job name as a global variable
+# so that the epilog can see it
+{% if epilog %}
+export EXECDIR=${execdir}
+export JOBDIR=${jobdir}
+export OUTPUTDIR=${outputdir}
+export STDOUT=${stdout}
+export STDERR=${stderr}
+{% else %}{% endif %}
+
 # make these directories if they do not exist
 mkdir -p ${jobdir}
 mkdir -p ${execdir}
+mkdir -p ${outputdir}
 
 echo "Starting Job Log" 
 echo "----------------------------------------" 
@@ -61,7 +80,10 @@ echo "JOBSDIR ${jobsdir}"
 echo "JOBNAME ${jobname}" 
 echo "JOBDIR ${jobdir}" 
 echo "OUTPUTDIR ${outputdir}" 
-echo "EXECDIR ${execdir}" 
+echo "EXECDIR ${execdir}"
+echo "LOGSDIR ${logsdir}" 
+echo "STDOUT ${stdout}" 
+echo "STDERR ${stderr}" 
 echo ""  
 
 # saving SLURM environmental variables
