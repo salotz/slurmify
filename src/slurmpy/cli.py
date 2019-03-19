@@ -45,7 +45,7 @@ def _normalize_context_kwargs(context_kwargs):
 
     if 'setup' in context_kwargs['context']:
 
-        setup_kwargs = context_kwargs['context']['setup']
+        setup_kwargs = context_kwargs['context'].pop('setup')
 
         # convert the environment variables to tuples
         setup_kwargs['env_vars'] = [(key, value) for key, value in
@@ -54,11 +54,11 @@ def _normalize_context_kwargs(context_kwargs):
         setup_kwargs = {}
 
     if 'teardown' in context_kwargs['context']:
-        teardown_kwargs = context_kwargs['context']['teardown']
+        teardown_kwargs = context_kwargs['context'].pop('teardown')
     else:
         teardown_kwargs = {}
 
-    return setup_kwargs, teardown_kwargs
+    return context_kwargs['context'], setup_kwargs, teardown_kwargs
 
 def _normalize_template_kwargs(run_kwargs):
 
@@ -168,7 +168,6 @@ def slurmify(config, epilog, constraint, walltime, memory, num_cpus, num_gpus,
         ('memory', memory),
         ('num_cpus', num_cpus),
         ('num_gpus', num_gpus),
-        ('epilog', epilog)
     )
 
     # load the run settings config file
@@ -183,10 +182,6 @@ def slurmify(config, epilog, constraint, walltime, memory, num_cpus, num_gpus,
 
         if option is not None:
             run_kwargs[opt_key] = option
-
-    # pop the epilog out of there since we will need it for generating
-    # the payload
-    epilog = run_kwargs.pop('epilog')
 
     # apply the defaults for these options for those that are
     # hardcoded here or not given
@@ -203,8 +198,7 @@ def slurmify(config, epilog, constraint, walltime, memory, num_cpus, num_gpus,
         context_kwargs = {'context' : {}}
 
     # override the values in from the base config file
-    setup_kwargs, teardown_kwargs = _normalize_context_kwargs(context_kwargs)
-
+    context_kwargs, setup_kwargs, teardown_kwargs = _normalize_context_kwargs(context_kwargs)
 
     # get the job header for this job
     sjob = slm.SlurmJob(job_name)
@@ -217,31 +211,11 @@ def slurmify(config, epilog, constraint, walltime, memory, num_cpus, num_gpus,
     run_template = env.get_template(slm.SLURM_RUN_TEMPLATE)
     commands_template = env.get_template(slm.SLURM_COMMANDS_TEMPLATE)
     script_template = env.get_template(slm.SLURM_SCRIPT_TEMPLATE)
-
     setup_template = env.get_template(slm.SLURM_SETUP_TEMPLATE)
     teardown_template = env.get_template(slm.SLURM_TEARDOWN_TEMPLATE)
 
     # render the run options header
     run_header = run_template.render(**run_kwargs)
-
-    # if an epilog was given we want to make a copy of it that we can
-    # embed into the script as a reference. This should be a more
-    # robust to implement the teardown phase, so we will add it to the
-    # beginning of the teardown payload
-    commented_epilog = ""
-    if epilog is not None:
-        commented_epilog = "## This is the epilog that will be run for each srun command:\n"
-        with open(epilog, 'r') as rf:
-            for line in rf.readlines():
-                commented_epilog += "## {}".format(line)
-
-
-    # render the setups and teardowns:
-    setup = setup_template.render(**setup_kwargs)
-    teardown = teardown_template.render(**teardown_kwargs)
-
-    # add it to the beginning of the teardown payload
-    teardown = commented_epilog + "\n## Now the batch teardown script:\n\n" + teardown
 
     # generate the payloads depending on the type of input: command,
     # script, batch
@@ -272,10 +246,24 @@ def slurmify(config, epilog, constraint, walltime, memory, num_cpus, num_gpus,
 
                 payloads = [script]
 
+                setups = [setup_template.render(**setup_kwargs, **context_kwargs)]
+                teardowns = [teardown_template.render(**teardown_kwargs, **context_kwargs)]
+
+
             # otherwise just treat it like a command
             else:
                 payloads = [commands_template.render(commands=[script_in],
                                                     epilog=epilog)]
+
+                # since we are not embedding it we want to copy that
+                # script to the execution environmen at runtime, so we
+                # modify the context scripts to deal with this by
+                # modifying kwargs for them
+                setups = [setup_template.render(task_script=script_in,
+                                               **setup_kwargs, **context_kwargs)]
+                teardowns = [teardown_template.render(task_script=script_in,
+                                                     **teardown_kwargs, **context_kwargs)]
+
 
     elif option_selected == 'batch':
 
@@ -294,6 +282,8 @@ def slurmify(config, epilog, constraint, walltime, memory, num_cpus, num_gpus,
                     script = rf.read()
 
                 payload = script
+                setup = setup_template.render(**setup_kwargs, **context_kwargs)
+                teardown = teardown_template.render(**teardown_kwargs, **context_kwargs)
 
 
             # otherwise just treat it like a command
@@ -301,11 +291,28 @@ def slurmify(config, epilog, constraint, walltime, memory, num_cpus, num_gpus,
                 payload = commands_template.render(commands=[in_path],
                                                    epilog=epilog)
 
+                # since we are not embedding it we want to copy that
+                # script to the execution environmen at runtime, so we
+                # modify the context scripts to deal with this by
+                # modifying kwargs for them
+                setup = setup_template.render(task_script=in_path,
+                                              **setup_kwargs, **context_kwargs)
+                teardown = teardown_template.render(task_script=in_path,
+                                                    **teardown_kwargs, **context_kwargs)
+
             payloads.append(payload)
+            setups.append(setup)
+            teardowns.append(teardown)
             in_names.append(script_file)
 
+
+
+
     scripts = []
-    for payload in payloads:
+    for i, payload in enumerate(payloads):
+
+        setup = setups[i]
+        teardown = teardowns[i]
 
         # get the script kwargs
         script_kwargs = {'slurm_job' : job_header,

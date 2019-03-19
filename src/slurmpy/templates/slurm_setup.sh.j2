@@ -39,10 +39,11 @@ done
 log=${jobdir}/log
 
 # directory to execute code in
-# execdir=${tmpdir}
-# execdir=$MY_DICKSON_SCRATCH/${jobname}
-#+TODO: make an if for different options
-execdir=${jobdir}/exec
+{% if exec_dir %}
+execdir={{ exec_dir }}/${jobname}
+{% else %}
+execdir=${jobdir}
+{% endif %}
 
 # make these directories if they do not exist
 mkdir -p ${jobdir}
@@ -57,9 +58,6 @@ echo ""   &>> ${log}
 
 # print the paths for all the variables constructed in this script
 echo "* Path Check" &>> ${log}
-echo "----------------------------------------"  &>> ${log}
-echo "Check Paths"  &>> ${log}
-echo "----------------------------------------"  &>> ${log}
 
 echo "" &>> ${log}
 echo "LOG ${log}" &>> ${log}
@@ -74,32 +72,12 @@ echo "EXECDIR ${execdir}" &>> ${log}
 echo ""  &>> ${log}
 
 # saving SLURM environmental variables
-echo "* Environmental Variables" &>> ${log}
-echo "----------------------------------------"  &>> ${log}
-echo "SLURM Environmental Variables" &>> ${log}
-echo "----------------------------------------" &>> ${log}
+echo "* SLURM Environmental Variables" &>> ${log}
 
 echo ""   &>> ${log}
 # SLURM env vars
 echo "SLURM ENV:"  &>> ${log}
 env | grep "SLURM"  &>> ${log}
-
-#+TODO: SLURM Job id number
-# echo "* SLURM Job info" &>> ${log}
-# echo "SLURM_JOB_ID number"  &>> ${log}
-# PBS_JOBID_NUM=(${SLURM_JOBID//./ })
-# echo "PBS_JOBID_NUM: $PBS_JOBID_NUM" &>> ${log}
-
-#+TODO: NODEFILE
-# echo "PBS_NODEFILE:"  &>> ${log}
-# cat $PBS_NODEFILE  &>> ${log}
-# # GPUFILE
-# echo "PBS_GPUFILE:"  &>> ${log}
-# cat $PBS_GPUFILE  &>> ${log}
-# # MICFILE
-# echo "PBS_MICFILE:"  &>> ${log}
-# cat $PBS_MICFILE  &>> ${log}
-# echo ""  &>> ${log}
 
 # initial
 echo "* Environment Initialization" &>> ${log}
@@ -116,17 +94,17 @@ source /etc/profile &>> ${log}
 echo "" &>> ${log}
 
 # load hpcc modules
-echo "------------" &>> ${log}
-echo "RUNNING: source /opt/software/modulefiles/setup_modules.sh" &>> ${log}
-echo "------------" &>> ${log}
-source /opt/software/modulefiles/setup_modules.sh &>> ${log}
-echo "" &>> ${log}
+# echo "------------" &>> ${log}
+# echo "RUNNING: source /opt/software/modulefiles/setup_modules.sh" &>> ${log}
+# echo "------------" &>> ${log}
+# source /opt/software/modulefiles/setup_modules.sh &>> ${log}
+# echo "" &>> ${log}
 
 
 # LMOD module load
-echo "* Loading Modules" &>> ${log}
+echo "** Loading Modules" &>> ${log}
 {% for mod in lmod_modules %}
-echo "** loading the module: {{ mod }}" &>> ${log}
+echo "loading the module: {{ mod }}" &>> ${log}
 module load {{ mod }} &>> ${log}
 {% endfor %}
 echo "" &>> ${log}
@@ -135,23 +113,24 @@ echo "" &>> ${log}
 # set environmental variables and other local variables that are used for 
 # many types of scripts
 # ===============================================================================
-echo "------------" &>> ${log}
-echo "Setting environmental variables"  &>> ${log}
-echo "------------" &>> ${log}
+echo "** Setting environmental variables"  &>> ${log}
 
 {% for env_var in env_vars %}
 echo "Exporting env var: {{ env_var[0] }}"
 export {{ env_var[0] }}={{ env_var[1] }}
 {% endfor %}
 
+# print out the environmental variables after modifications
+echo "** Environmental variables before execution:"  &>> ${log}
+env &>> ${log}
+echo ""   &>> ${log}
+
 # ===============================================================================
 
 echo "* Preparing Execution Directory" &>> ${log}
 # remove current contents of the execdir, useful for if running
 # interactive job which writes to same dir, harmless if not
-echo "------------" &>> ${log}
-echo "Removing existing files if they exist in EXECDIR: $EXECDIR" &>> ${log}
-echo "------------" &>> ${log}
+echo "Removing existing files if they exist in EXECDIR: ${execdir}" &>> ${log}
 rm -rf ${execdir}/* &>> ${log}
 echo "" &>> ${log}
 
@@ -162,12 +141,33 @@ echo "------------" &>> ${log}
 cp -rf ${inputdir}/* ${execdir}/ &>> ${log}
 echo "" &>> ${log}
 
-# copy the actual submission script used
+# copy the actual submission script used (a self operation)
 echo "------------" &>> ${log}
 echo "Copying submission script ${goal_dir}/${jobname} to EXECDIR: $execdir" &>> ${log}
 echo "------------" &>> ${log}
 cp "${0}" ${execdir}/ &>> ${log}
 echo "" &>> ${log}
+
+# copy the epilog if there is one
+{% if epilog %}
+epilog="{{ epilog }}"
+echo "------------" &>> ${log}
+echo "Copying epilog script ${epilog} to EXECDIR: ${execdir}" &>> ${log}
+echo "------------" &>> ${log}
+cp "${epilog}" ${execdir}/ &>> ${log}
+echo "" &>> ${log}
+{% else %}{% endif %}
+
+# copy the task script if there is one
+{% if task_script %}
+task_script="{{ task_script }}"
+echo "------------" &>> ${log}
+echo "Copying the task script ${task_script} to EXECDIR: ${execdir}" &>> ${log}
+echo "------------" &>> ${log}
+cp "${task_script}" ${execdir}/ &>> ${log}
+echo "" &>> ${log}
+{% else %}{% endif %}
+
 
 # change to the exec dir
 echo "------------" &>> ${log}
@@ -183,9 +183,3 @@ echo "------------" &>> ${log}
 ls ${execdir} &>> ${log}
 echo "" &>> ${log}
 
-# print out the environmental variables after modifications
-echo "------------" &>> ${log}
-echo "Environmental variables before execution:"  &>> ${log}
-echo "------------" &>> ${log}
-env &>> ${log}
-echo ""   &>> ${log}
