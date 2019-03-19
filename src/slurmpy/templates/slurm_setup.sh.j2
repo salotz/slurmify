@@ -35,9 +35,6 @@ while [ -d "${outputdir}" ]; do
   outputdir="${baseoutputdir}$((count++))";
 done
 
-# log files
-log=${jobdir}/log
-
 # directory to execute code in
 {% if exec_dir %}
 execdir={{ exec_dir }}/${jobname}
@@ -49,71 +46,67 @@ execdir=${jobdir}
 mkdir -p ${jobdir}
 mkdir -p ${execdir}
 
-# Starting the LOG file
-
-echo "* Starting Log file" &>> ${log}
-echo ${date} &> ${log}
-echo "----------------------------------------" &>> ${log}
-echo ""   &>> ${log}
+echo "Starting Job Log" 
+echo "----------------------------------------" 
+echo ""   
 
 # print the paths for all the variables constructed in this script
-echo "* Path Check" &>> ${log}
+echo "* Path Check" 
 
-echo "" &>> ${log}
-echo "LOG ${log}" &>> ${log}
-echo "JOBID ${jobid}" &>> ${log}
-echo "GOAL_DIR ${goal_dir}" &>> ${log}
-echo "INPUTDIR ${inputdir}" &>> ${log}
-echo "JOBSDIR ${jobsdir}" &>> ${log}
-echo "JOBNAME ${jobname}" &>> ${log}
-echo "JOBDIR ${jobdir}" &>> ${log}
-echo "OUTPUTDIR ${outputdir}" &>> ${log}
-echo "EXECDIR ${execdir}" &>> ${log}
-echo ""  &>> ${log}
+echo "" 
+echo "JOBID ${jobid}" 
+echo "GOAL_DIR ${goal_dir}" 
+echo "INPUTDIR ${inputdir}" 
+echo "JOBSDIR ${jobsdir}" 
+echo "JOBNAME ${jobname}" 
+echo "JOBDIR ${jobdir}" 
+echo "OUTPUTDIR ${outputdir}" 
+echo "EXECDIR ${execdir}" 
+echo ""  
 
 # saving SLURM environmental variables
-echo "* SLURM Environmental Variables" &>> ${log}
+echo "* SLURM Environmental Variables" 
 
-echo ""   &>> ${log}
+echo ""   
 # SLURM env vars
-echo "SLURM ENV:"  &>> ${log}
-env | grep "SLURM"  &>> ${log}
+echo "SLURM ENV:"  
+env | grep "SLURM"  
 
 # initial
-echo "* Environment Initialization" &>> ${log}
-echo ""  &>> ${log}
-echo "----------------------------------------" &>> ${log}
-echo "Initialization" &>> ${log}
-echo "----------------------------------------" &>> ${log}
+echo "* Environment Initialization" 
+echo ""  
+echo "----------------------------------------" 
+echo "Initialization" 
+echo "----------------------------------------" 
 
 # load profile
-echo "------------" &>> ${log}
-echo "RUNNING: source /etc/profile" &>> ${log}
-echo "------------" &>> ${log}
-source /etc/profile &>> ${log}
-echo "" &>> ${log}
+echo "------------" 
+echo "RUNNING: source /etc/profile" 
+echo "------------" 
+source /etc/profile 
+echo "" 
 
 # load hpcc modules
-# echo "------------" &>> ${log}
-# echo "RUNNING: source /opt/software/modulefiles/setup_modules.sh" &>> ${log}
-# echo "------------" &>> ${log}
-# source /opt/software/modulefiles/setup_modules.sh &>> ${log}
-# echo "" &>> ${log}
+# echo "------------" 
+# echo "RUNNING: source /opt/software/modulefiles/setup_modules.sh" 
+# echo "------------" 
+# source /opt/software/modulefiles/setup_modules.sh 
+# echo "" 
 
 
 # LMOD module load
-echo "** Loading Modules" &>> ${log}
+echo "** Loading Modules" 
 {% for mod in lmod_modules %}
-echo "loading the module: {{ mod }}" &>> ${log}
-module load {{ mod }} &>> ${log}
+echo "loading the module: {{ mod }}" 
+module load {{ mod }} 
 {% endfor %}
-echo "" &>> ${log}
+echo "" 
 
 
 # set environmental variables and other local variables that are used for 
 # many types of scripts
 # ===============================================================================
-echo "** Setting environmental variables"  &>> ${log}
+echo "** Setting environmental variables"  
 
 {% for env_var in env_vars %}
 echo "Exporting env var: {{ env_var[0] }}"
@@ -121,65 +114,65 @@ export {{ env_var[0] }}={{ env_var[1] }}
 {% endfor %}
 
 # print out the environmental variables after modifications
-echo "** Environmental variables before execution:"  &>> ${log}
-env &>> ${log}
-echo ""   &>> ${log}
+echo "** Environmental variables before execution:"  
+env 
+echo ""   
 
 # ===============================================================================
 
-echo "* Preparing Execution Directory" &>> ${log}
+echo "* Preparing Execution Directory" 
 # remove current contents of the execdir, useful for if running
 # interactive job which writes to same dir, harmless if not
-echo "Removing existing files if they exist in EXECDIR: ${execdir}" &>> ${log}
-rm -rf ${execdir}/* &>> ${log}
-echo "" &>> ${log}
+echo "Removing existing files if they exist in EXECDIR: ${execdir}" 
+rm -rf ${execdir}/* 
+echo "" 
 
 # copy the input files to the execution directory
-echo "------------" &>> ${log}
-echo "Copying input files from INPUTDIR: ${inputdir} to EXECDIR: ${execdir}" &>> ${log}
-echo "------------" &>> ${log}
-cp -rf ${inputdir}/* ${execdir}/ &>> ${log}
-echo "" &>> ${log}
+echo "------------" 
+echo "Copying input files from INPUTDIR: ${inputdir} to EXECDIR: ${execdir}" 
+echo "------------" 
+cp -rf ${inputdir}/* ${execdir}/ 
+echo "" 
 
 # copy the actual submission script used (a self operation)
-echo "------------" &>> ${log}
-echo "Copying submission script ${goal_dir}/${jobname} to EXECDIR: $execdir" &>> ${log}
-echo "------------" &>> ${log}
-cp "${0}" ${execdir}/ &>> ${log}
-echo "" &>> ${log}
+echo "------------" 
+echo "Copying submission script ${goal_dir}/${jobname} to EXECDIR: $execdir" 
+echo "------------" 
+cp "${0}" ${execdir}/ 
+echo "" 
 
 # copy the epilog if there is one
 {% if epilog %}
 epilog="{{ epilog }}"
-echo "------------" &>> ${log}
-echo "Copying epilog script ${epilog} to EXECDIR: ${execdir}" &>> ${log}
-echo "------------" &>> ${log}
-cp "${epilog}" ${execdir}/ &>> ${log}
-echo "" &>> ${log}
+echo "------------" 
+echo "Copying epilog script ${epilog} to EXECDIR: ${execdir}" 
+echo "------------" 
+cp "${epilog}" ${execdir}/ 
+echo "" 
 {% else %}{% endif %}
 
 # copy the task script if there is one
 {% if task_script %}
 task_script="{{ task_script }}"
-echo "------------" &>> ${log}
-echo "Copying the task script ${task_script} to EXECDIR: ${execdir}" &>> ${log}
-echo "------------" &>> ${log}
-cp "${task_script}" ${execdir}/ &>> ${log}
-echo "" &>> ${log}
+echo "------------" 
+echo "Copying the task script ${task_script} to EXECDIR: ${execdir}" 
+echo "------------" 
+cp "${task_script}" ${execdir}/ 
+echo "" 
 {% else %}{% endif %}
 
 
 # change to the exec dir
-echo "------------" &>> ${log}
-echo "moving to EXECDIR: ${execdir}" &>> ${log}
-echo "------------" &>> ${log}
-cd ${execdir} &>> ${log}
-echo "" &>> ${log}
+echo "------------" 
+echo "moving to EXECDIR: ${execdir}" 
+echo "------------" 
+cd ${execdir} 
+echo "" 
 
 # write file names in $execdir to log
-echo "------------" &>> ${log}
-echo "listing of EXECDIR: $execdir" &>> ${log}
-echo "------------" &>> ${log}
-ls ${execdir} &>> ${log}
-echo "" &>> ${log}
+echo "------------" 
+echo "listing of EXECDIR: $execdir" 
+echo "------------" 
+ls ${execdir} 
+echo "" 
 

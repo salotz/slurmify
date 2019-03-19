@@ -10,7 +10,7 @@ echo "Running the setup"
 
 {{ setup }}
 
-echo ""   &>> $LOG
+echo ""
 # ===============================================================================
 
 
@@ -21,18 +21,18 @@ echo ""   &>> $LOG
 # we print a simple confirmation to the terminal that we are starting the main script
 echo "Starting main script"
 
-echo "* Script" &>> $LOG
-echo "------------" &>> $LOG
-echo "Running script" &>> $LOG
-echo "===============================================================================" &>> $LOG
+echo "* Script"
+echo "------------"
+echo "Running script"
+echo "==============================================================================="
 
 {{ payload }}
 
 
-echo "===============================================================================" &>> $LOG
-echo "done with script" &>> $LOG
-echo "------------" &>> $LOG
-echo ""   &>> $LOG
+echo "==============================================================================="
+echo "done with script"
+echo "------------"
+echo ""
 
 # we print a simple confirmation to the terminal that we are starting the main script
 echo "Finished main script"
