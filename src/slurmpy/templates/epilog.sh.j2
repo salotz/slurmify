@@ -1,0 +1,27 @@
+# move the output files in EXECDIR back to the job output dir
+echo "* Clean Up" &>> $LOG
+echo "------------" &>> $LOG
+echo "moving EXECDIR $EXECDIR to OUTPUTDIR $OUTPUTDIR" &>> $LOG
+echo "------------" &>> $LOG
+mv $EXECDIR $OUTPUTDIR  &>> $LOG
+echo ""   &>> $LOG
+
+
+# move the PBS stdout and stderr files to the jobdir
+echo "------------" &>> $LOG
+echo "PBS STDOUT is in $PBS_JOB_STDOUT" &>> $LOG
+echo "------------" &>> $LOG
+echo ""   &>> $LOG
+
+echo "------------" &>> $LOG
+echo "PBS STDERR $PBS_JOB_STDERR" &>> $LOG
+echo "------------" &>> $LOG
+
+# The last thing we do is move the log file to the output
+echo "------------" 1>> $LOG 2>> $LOG
+echo "moving LOG $LOG to OUTPUTDIR $OUTPUTDIR" 1>> $LOG 2>> $LOG
+echo "------------" 1>> $LOG 2>> $LOG
+mv $LOG $OUTPUTDIR/  1>> $LOG 2>> $LOG
+
+# print to the main terminal that we are done
+echo "Done with job"

@@ -10,15 +10,18 @@ import slurmpy.slurmpy as slm
 RUN_DEFAULTS = {
     'nodes' : 1,
     'ntasks' : 1,
-    'mail_type' : slm.MAIL_TYPE_DEFAULT
+    'mail_type' : slm.MAIL_TYPE_DEFAULT,
+    'epilog' : None,
 }
 
 
 CLI_TO_TEMPLATE_KEYS = (
     ('num_cpus', 'cpus_per_task'),
-    ('memory', 'node_memory'),
+    ('memory', 'node_mem'),
     ('email', 'mail_user'),
 )
+
+INT_TO_STR = ('num_cpus', 'num_gpus',)
 
 CLI_TO_GRE_KEYS = (
     ('num_gpus', 'gpu'),
@@ -37,6 +40,25 @@ def _apply_run_defaults(run_kwargs, run_defaults=RUN_DEFAULTS):
             run_kwargs[key] = value
 
     return run_kwargs
+
+def _normalize_context_kwargs(context_kwargs):
+
+    if 'setup' in context_kwargs['context']:
+
+        setup_kwargs = context_kwargs['context']['setup']
+
+        # convert the environment variables to tuples
+        setup_kwargs['env_vars'] = [(key, value) for key, value in
+                                     setup_kwargs['env_vars'].items()]
+    else:
+        setup_kwargs = {}
+
+    if 'teardown' in context_kwargs['context']:
+        teardown_kwargs = context_kwargs['context']['teardown']
+    else:
+        teardown_kwargs = {}
+
+    return setup_kwargs, teardown_kwargs
 
 def _normalize_template_kwargs(run_kwargs):
 
@@ -57,6 +79,12 @@ def _normalize_template_kwargs(run_kwargs):
 
     run_kwargs['gres'] = GRE_JOIN_CHAR.join(substrings)
 
+
+    # then cast certain values to strings
+    for cli_key, value in run_kwargs.items():
+        if cli_key in INT_TO_STR:
+            run_kwargs[cli_key] = str(value)
+
     # then just rename the other ones to the template key
     for cli_key, template_key in CLI_TO_TEMPLATE_KEYS:
 
@@ -67,26 +95,47 @@ def _normalize_template_kwargs(run_kwargs):
 
 @click.command()
 @click.option('--config', type=click.Path(exists=True), default=None,
-              help="""Configuration file specifying all optional values.
-                    Options which are given will override the config values.""")
+              help="""Configuration file specifying job submission (and context if given) values.
+                    All other options which are given will override the config values.""")
+@click.option('--epilog', type=click.Path(exists=True), default=None,
+              help="""Script to be run in all cases (even in failure) after the command""")
 @click.option('--constraint', default=None)
 @click.option('--walltime', default=None)
 @click.option('--memory', default=None)
 @click.option('--num_cpus', default=None)
 @click.option('--num_gpus', default=None)
+@click.option('--context', type=click.Path(exists=True), default=None,
+              help="""Configuration file specifying context setup and teardown values.
+                    Options which are given will override the config values,
+              but this overrides options in the 'config' option.""")
 @click.option('--command', default=None)
-@click.option('--script-in', type=click.Path(exists=True, dir_okay=False),
+@click.option('--embed-script', default=False,
+              help="Will embed scripts to the slurmified script (no srun formatting is done).")
+@click.option('--script-in', type=click.Path(exists=True, dir_okay=False, resolve_path=True),
               default=None)
-@click.option('--script-out', type=click.Path(exists=False, dir_okay=False),
+@click.option('--script-out', type=click.Path(exists=False, dir_okay=False, resolve_path=True),
               default=None)
-@click.option('--batch-in', type=click.Path(exists=True, file_okay=False),
+@click.option('--batch-in', type=click.Path(exists=True, file_okay=False, resolve_path=True),
               default=None)
-@click.option('--batch-out', type=click.Path(exists=False, file_okay=False),
+@click.option('--batch-out', type=click.Path(exists=False, file_okay=False, resolve_path=True),
               default=None)
 @click.argument('job_name')
-def slurmify(config, constraint, walltime, memory, num_cpus, num_gpus,
-             command, script_in, script_out, batch_in, batch_out,
+def slurmify(config, epilog, constraint, walltime, memory, num_cpus, num_gpus,
+             context,
+             command, embed_script, script_in, script_out, batch_in, batch_out,
              job_name):
+
+    # expand all the paths to the full paths
+    if config is not None:
+        config = osp.abspath(osp.expanduser(config))
+    if script_in is not None:
+        script_in = osp.abspath(osp.expanduser(script_in))
+    if script_out is not None:
+        script_out = osp.abspath(osp.expanduser(script_out))
+    if batch_in is not None:
+        batch_in = osp.abspath(osp.expanduser(batch_in))
+    if batch_out is not None:
+        batch_out = osp.abspath(osp.expanduser(batch_out))
 
     # check to make sure we have inputs to slurmify
 
@@ -112,19 +161,21 @@ def slurmify(config, constraint, walltime, memory, num_cpus, num_gpus,
     option_selected = option_idxs[[i for i, sel in enumerate(options_selected)
                                    if sel][0]]
 
-    # load the config file
-    if config is not None:
-        run_kwargs = toml.load(config)
-    else:
-        run_kwargs = {}
-
+    # gather the options that can override the config file
     option_kvs = (
         ('constraint', constraint),
         ('walltime', walltime),
         ('memory', memory),
         ('num_cpus', num_cpus),
-        ('num_gpus', num_gpus)
+        ('num_gpus', num_gpus),
+        ('epilog', epilog)
     )
+
+    # load the run settings config file
+    if config is not None:
+        run_kwargs = toml.load(config)
+    else:
+        run_kwargs = {}
 
 
     # update values from the options if given
@@ -133,18 +184,31 @@ def slurmify(config, constraint, walltime, memory, num_cpus, num_gpus,
         if option is not None:
             run_kwargs[opt_key] = option
 
+    # pop the epilog out of there since we will need it for generating
+    # the payload
+    epilog = run_kwargs.pop('epilog')
+
+    # apply the defaults for these options for those that are
+    # hardcoded here or not given
     run_kwargs = _apply_run_defaults(run_kwargs)
 
     # normalize the keys to the keys they correspond to in the actual
     # template, translating them from this input interface to that one
     run_kwargs = _normalize_template_kwargs(run_kwargs)
 
+    # load the run settings config file
+    if context is not None:
+        context_kwargs = toml.load(context)
+    else:
+        context_kwargs = {'context' : {}}
+
+    # override the values in from the base config file
+    setup_kwargs, teardown_kwargs = _normalize_context_kwargs(context_kwargs)
+
 
     # get the job header for this job
     sjob = slm.SlurmJob(job_name)
     job_header = sjob.job_header
-    setup = sjob.setup
-    teardown = sjob.teardown
 
     # the environment with the templates
     env = slm.get_env()
@@ -154,9 +218,30 @@ def slurmify(config, constraint, walltime, memory, num_cpus, num_gpus,
     commands_template = env.get_template(slm.SLURM_COMMANDS_TEMPLATE)
     script_template = env.get_template(slm.SLURM_SCRIPT_TEMPLATE)
 
+    setup_template = env.get_template(slm.SLURM_SETUP_TEMPLATE)
+    teardown_template = env.get_template(slm.SLURM_TEARDOWN_TEMPLATE)
+
     # render the run options header
     run_header = run_template.render(**run_kwargs)
 
+    # if an epilog was given we want to make a copy of it that we can
+    # embed into the script as a reference. This should be a more
+    # robust to implement the teardown phase, so we will add it to the
+    # beginning of the teardown payload
+    commented_epilog = ""
+    if epilog is not None:
+        commented_epilog = "## This is the epilog that will be run for each srun command:\n"
+        with open(epilog, 'r') as rf:
+            for line in rf.readlines():
+                commented_epilog += "## {}".format(line)
+
+
+    # render the setups and teardowns:
+    setup = setup_template.render(**setup_kwargs)
+    teardown = teardown_template.render(**teardown_kwargs)
+
+    # add it to the beginning of the teardown payload
+    teardown = commented_epilog + "\n## Now the batch teardown script:\n\n" + teardown
 
     # generate the payloads depending on the type of input: command,
     # script, batch
@@ -166,7 +251,8 @@ def slurmify(config, constraint, walltime, memory, num_cpus, num_gpus,
 
     if option_selected == 'command':
         # render the commands for the payload
-        payloads = [commands_template.render(commands=[command])]
+        payloads = [commands_template.render(commands=[command],
+                                             epilog=epilog)]
 
     elif option_selected == 'script':
 
@@ -176,7 +262,20 @@ def slurmify(config, constraint, walltime, memory, num_cpus, num_gpus,
 
         # and set it as the payload without adding sruns like we do
         # for command
-        payloads = [script]
+
+            # embed the script into the script as the payload, if this
+            # was requested
+            if embed_script:
+
+                with open(script_in, 'r') as rf:
+                    script = rf.read()
+
+                payloads = [script]
+
+            # otherwise just treat it like a command
+            else:
+                payloads = [commands_template.render(commands=[script_in],
+                                                    epilog=epilog)]
 
     elif option_selected == 'batch':
 
@@ -187,10 +286,22 @@ def slurmify(config, constraint, walltime, memory, num_cpus, num_gpus,
 
             in_path = osp.join(batch_in, script_file)
 
-            with open(in_path, 'r') as rf:
-                script = rf.read()
+            # embed the script into the script as the payload, if this
+            # was requested
+            if embed_script:
 
-            payloads.append(script)
+                with open(in_path, 'r') as rf:
+                    script = rf.read()
+
+                payload = script
+
+
+            # otherwise just treat it like a command
+            else:
+                payload = commands_template.render(commands=[in_path],
+                                                   epilog=epilog)
+
+            payloads.append(payload)
             in_names.append(script_file)
 
     scripts = []

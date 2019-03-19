@@ -20,11 +20,11 @@
 {%- else %}{% endif %}
 
 {% if mail_type -%}
-#SBATCH --mail-type={{ mail_type }}
+#SBATCH --mail-type="{{ mail_type }}"
 {%- else %}{% endif %}
 
 {% if constraint -%}
-#SBATCH --constraint {{ constraint }}
+#SBATCH --constraint="{{ constraint }}"
 {%- else %}{% endif %}
 
 {% if gres -%}
@@ -33,12 +33,4 @@
 
 {% if chdir -%}
 #SBATCH --chdir={{ chdir }}
-{%- else %}{% endif %}
-
-{% if prolog -%}
-#SBATCH --prolog={{ prolog }}
-{%- else %}{% endif %}
-
-{% if epilog -%}
-#SBATCH --epilog={{ epilog }}
 {%- else %}{% endif %}

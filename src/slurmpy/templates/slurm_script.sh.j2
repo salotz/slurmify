@@ -1,8 +1,48 @@
 {{ slurm_job }}
 {{ slurm_run }}
 
+# ------------------------------
+
+# we print a simple confirmation to the terminal that we have started
+echo "Starting job script"
+
+echo "Running the setup"
+
 {{ setup }}
+
+echo ""   &>> $LOG
+# ===============================================================================
+
+
+# ------------------------------
+# The code for this script
+# ===============================================================================
+
+# we print a simple confirmation to the terminal that we are starting the main script
+echo "Starting main script"
+
+echo "* Script" &>> $LOG
+echo "------------" &>> $LOG
+echo "Running script" &>> $LOG
+echo "===============================================================================" &>> $LOG
 
 {{ payload }}
 
+
+echo "===============================================================================" &>> $LOG
+echo "done with script" &>> $LOG
+echo "------------" &>> $LOG
+echo ""   &>> $LOG
+
+# we print a simple confirmation to the terminal that we are starting the main script
+echo "Finished main script"
+
+# ===============================================================================
+
+echo "starting the teardown process"
+
 {{ teardown}}
+
+echo "finished the teardown process"
+
+echo "Exiting."

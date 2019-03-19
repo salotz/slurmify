@@ -10,8 +10,10 @@ from slurmpy import TEMPLATES_PATH
 # names of the templates
 SLURM_JOB_TEMPLATE = "slurm_job.sh.j2"
 SLURM_RUN_TEMPLATE = "slurm_run.sh.j2"
-SLURM_SCRIPT_TEMPLATE = "slurm_script.sh.j2"
+SLURM_SETUP_TEMPLATE = "slurm_setup.sh.j2"
+SLURM_TEARDOWN_TEMPLATE = "slurm_teardown.sh.j2"
 SLURM_COMMANDS_TEMPLATE = "slurm_commands.sh.j2"
+SLURM_SCRIPT_TEMPLATE = "slurm_script.sh.j2"
 
 # list of all the templates
 SLURM_TEMPLATE_NAMES = (SLURM_JOB_TEMPLATE, SLURM_RUN_TEMPLATE,
@@ -52,7 +54,27 @@ SLURM_SCRIPT_TARGETS = (
 )
 
 SLURM_COMMANDS_TARGETS = (
-    ('commands', False)
+    ('commands', False),
+    ('epilog', True)
+)
+
+SLURM_SCRIPT_EMBED_TARGETS = (
+    ('script', False),
+    ('epilog', True)
+)
+
+SLURM_SETUP_TARGETS = (
+    ('task_name', False),
+    ('task_dir_path', False),
+    ('env_vars', True),
+    ('gnu_module', True),
+    ('cuda_module', True),
+    # slurm job stuff
+    ('walltime', True),
+    ('memory', True),
+    ('num_nodes', True),
+    ('num_processors', True),
+    ('num_gpus', True),
 )
 
 # Defaults
@@ -120,7 +142,7 @@ class SlurmJob():
     def teardown(self):
         return self._teardown
 
-    def run(self, run_kwargs, commands):
+    def run(self, run_kwargs, commands, epilog=None):
 
         run_template = self.env.get_template(SLURM_RUN_TEMPLATE)
         commands_template = self.env.get_template(SLURM_COMMANDS_TEMPLATE)
@@ -131,7 +153,8 @@ class SlurmJob():
         else:
             raise ValueError
 
-        payload = commands_template.render(commands=commands)
+        payload = commands_template.render(commands=commands,
+                                           epilog=epilog)
 
         script_kwargs = {
             'slurm_job' : self.job_header,

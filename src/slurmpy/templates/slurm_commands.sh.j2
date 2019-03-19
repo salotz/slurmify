@@ -1,3 +1,4 @@
 {% for command in commands %}
-srun {{ command }}
+srun {% if epilog %}--epilog={{ epilog }}{% else %}{% endif %}\
+        {{ command }}
 {% endfor %}

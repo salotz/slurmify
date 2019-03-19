@@ -1,0 +1,191 @@
+# ------------------------------
+
+# we print a simple confirmation to the terminal that we have started
+echo "Starting job"
+
+# the date and time this was run
+date=$(date)
+
+# the job id
+jobid=${SLURM_JOB_ID}
+
+# the job name
+jobname=${SLURM_JOB_NAME}
+
+# directory path for this task
+goal_dir="{{ goal_dir_path }}"
+
+# the directory with all of the input
+inputdir=${goal_dir}/input
+# directory to put job results in
+jobsdir=${goal_dir}/jobs
+
+# the directory for the output of this job
+jobname=${jobid}_${jobname}
+jobdir=${jobsdir}/${jobname}
+
+# the directory output will be put into after completion
+baseoutputdir=${jobdir}/output
+outputdir=${baseoutputdir}
+
+# if we are running an interactive job we want to write out the new
+# outputs to another outputs folder
+count=1
+while [ -d "${outputdir}" ]; do
+  outputdir="${baseoutputdir}$((count++))";
+done
+
+# log files
+log=${jobdir}/log
+
+# directory to execute code in
+# execdir=${tmpdir}
+# execdir=$MY_DICKSON_SCRATCH/${jobname}
+#+TODO: make an if for different options
+execdir=${jobdir}/exec
+
+# make these directories if they do not exist
+mkdir -p ${jobdir}
+mkdir -p ${execdir}
+
+# Starting the LOG file
+
+echo "* Starting Log file" &>> ${log}
+echo ${date} &> ${log}
+echo "----------------------------------------" &>> ${log}
+echo ""   &>> ${log}
+
+# print the paths for all the variables constructed in this script
+echo "* Path Check" &>> ${log}
+echo "----------------------------------------"  &>> ${log}
+echo "Check Paths"  &>> ${log}
+echo "----------------------------------------"  &>> ${log}
+
+echo "" &>> ${log}
+echo "LOG ${log}" &>> ${log}
+echo "JOBID ${jobid}" &>> ${log}
+echo "GOAL_DIR ${goal_dir}" &>> ${log}
+echo "INPUTDIR ${inputdir}" &>> ${log}
+echo "JOBSDIR ${jobsdir}" &>> ${log}
+echo "JOBNAME ${jobname}" &>> ${log}
+echo "JOBDIR ${jobdir}" &>> ${log}
+echo "OUTPUTDIR ${outputdir}" &>> ${log}
+echo "EXECDIR ${execdir}" &>> ${log}
+echo ""  &>> ${log}
+
+# saving SLURM environmental variables
+echo "* Environmental Variables" &>> ${log}
+echo "----------------------------------------"  &>> ${log}
+echo "SLURM Environmental Variables" &>> ${log}
+echo "----------------------------------------" &>> ${log}
+
+echo ""   &>> ${log}
+# SLURM env vars
+echo "SLURM ENV:"  &>> ${log}
+env | grep "SLURM"  &>> ${log}
+
+#+TODO: SLURM Job id number
+# echo "* SLURM Job info" &>> ${log}
+# echo "SLURM_JOB_ID number"  &>> ${log}
+# PBS_JOBID_NUM=(${SLURM_JOBID//./ })
+# echo "PBS_JOBID_NUM: $PBS_JOBID_NUM" &>> ${log}
+
+#+TODO: NODEFILE
+# echo "PBS_NODEFILE:"  &>> ${log}
+# cat $PBS_NODEFILE  &>> ${log}
+# # GPUFILE
+# echo "PBS_GPUFILE:"  &>> ${log}
+# cat $PBS_GPUFILE  &>> ${log}
+# # MICFILE
+# echo "PBS_MICFILE:"  &>> ${log}
+# cat $PBS_MICFILE  &>> ${log}
+# echo ""  &>> ${log}
+
+# initial
+echo "* Environment Initialization" &>> ${log}
+echo ""  &>> ${log}
+echo "----------------------------------------" &>> ${log}
+echo "Initialization" &>> ${log}
+echo "----------------------------------------" &>> ${log}
+
+# load profile
+echo "------------" &>> ${log}
+echo "RUNNING: source /etc/profile" &>> ${log}
+echo "------------" &>> ${log}
+source /etc/profile &>> ${log}
+echo "" &>> ${log}
+
+# load hpcc modules
+echo "------------" &>> ${log}
+echo "RUNNING: source /opt/software/modulefiles/setup_modules.sh" &>> ${log}
+echo "------------" &>> ${log}
+source /opt/software/modulefiles/setup_modules.sh &>> ${log}
+echo "" &>> ${log}
+
+
+# LMOD module load
+echo "* Loading Modules" &>> ${log}
+{% for mod in lmod_modules %}
+echo "** loading the module: {{ mod }}" &>> ${log}
+module load {{ mod }} &>> ${log}
+{% endfor %}
+echo "" &>> ${log}
+
+
+# set environmental variables and other local variables that are used for 
+# many types of scripts
+# ===============================================================================
+echo "------------" &>> ${log}
+echo "Setting environmental variables"  &>> ${log}
+echo "------------" &>> ${log}
+
+{% for env_var in env_vars %}
+echo "Exporting env var: {{ env_var[0] }}"
+export {{ env_var[0] }}={{ env_var[1] }}
+{% endfor %}
+
+# ===============================================================================
+
+echo "* Preparing Execution Directory" &>> ${log}
+# remove current contents of the execdir, useful for if running
+# interactive job which writes to same dir, harmless if not
+echo "------------" &>> ${log}
+echo "Removing existing files if they exist in EXECDIR: $EXECDIR" &>> ${log}
+echo "------------" &>> ${log}
+rm -rf ${execdir}/* &>> ${log}
+echo "" &>> ${log}
+
+# copy the input files to the execution directory
+echo "------------" &>> ${log}
+echo "Copying input files from INPUTDIR: ${inputdir} to EXECDIR: ${execdir}" &>> ${log}
+echo "------------" &>> ${log}
+cp -rf ${inputdir}/* ${execdir}/ &>> ${log}
+echo "" &>> ${log}
+
+# copy the actual submission script used
+echo "------------" &>> ${log}
+echo "Copying submission script ${goal_dir}/${jobname} to EXECDIR: $execdir" &>> ${log}
+echo "------------" &>> ${log}
+cp "${0}" ${execdir}/ &>> ${log}
+echo "" &>> ${log}
+
+# change to the exec dir
+echo "------------" &>> ${log}
+echo "moving to EXECDIR: ${execdir}" &>> ${log}
+echo "------------" &>> ${log}
+cd ${execdir} &>> ${log}
+echo "" &>> ${log}
+
+# write file names in $execdir to log
+echo "------------" &>> ${log}
+echo "listing of EXECDIR: $execdir" &>> ${log}
+echo "------------" &>> ${log}
+ls ${execdir} &>> ${log}
+echo "" &>> ${log}
+
+# print out the environmental variables after modifications
+echo "------------" &>> ${log}
+echo "Environmental variables before execution:"  &>> ${log}
+echo "------------" &>> ${log}
+env &>> ${log}
+echo ""   &>> ${log}
