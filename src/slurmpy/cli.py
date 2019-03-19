@@ -273,6 +273,8 @@ def slurmify(config, epilog, constraint, walltime, memory, num_cpus, num_gpus,
         # just generate a script payload for everything in the batch
         # dir
         payloads = []
+        setups = []
+        teardowns = []
         for script_file in os.listdir(batch_in):
 
             in_path = osp.join(batch_in, script_file)
