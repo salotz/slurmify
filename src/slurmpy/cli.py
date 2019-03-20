@@ -342,12 +342,17 @@ def slurmify(config, epilog, constraint, walltime, memory, num_cpus, num_gpus,
             out_name = "{}.slurm".format(in_names[i])
             out_path = osp.join(batch_out, out_name)
 
+            click.echo("Writing submission: {}".format(out_name))
+
             # write it
             with open(out_path, 'w') as wf:
                 wf.write(script)
 
     # we write out the script from either command or script in
     elif script_out is not None:
+
+        click.echo("Writing submission: {}".format(script_out)
+
         with open(script_out, 'w') as wf:
             wf.write(scripts[0])
 
