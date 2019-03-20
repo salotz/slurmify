@@ -351,7 +351,7 @@ def slurmify(config, epilog, constraint, walltime, memory, num_cpus, num_gpus,
     # we write out the script from either command or script in
     elif script_out is not None:
 
-        click.echo("Writing submission: {}".format(script_out)
+        click.echo("Writing submission: {}".format(script_out))
 
         with open(script_out, 'w') as wf:
             wf.write(scripts[0])
