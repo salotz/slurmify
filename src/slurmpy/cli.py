@@ -1,6 +1,7 @@
 import os
 import os.path as osp
 from copy import copy
+import stat
 
 import click
 import toml
@@ -32,6 +33,10 @@ GRE_TEMPLATES = (
 )
 
 GRE_JOIN_CHAR = ','
+
+EXECUTABLE_PERMISSIONS = (stat.S_IXUSR | stat.S_IRUSR | stat.S_IWUSR
+                          | stat.S_IRGRP | stat.S_IWGRP | stat.S_IXGRP
+                          | stat.S_IROTH)
 
 def _apply_run_defaults(run_kwargs, run_defaults=RUN_DEFAULTS):
 
@@ -348,6 +353,9 @@ def slurmify(config, epilog, constraint, walltime, memory, num_cpus, num_gpus,
             with open(out_path, 'w') as wf:
                 wf.write(script)
 
+            os.chmod(out_path, EXECUTABLE_PERMISSIONS)
+
+
     # we write out the script from either command or script in
     elif script_out is not None:
 
@@ -355,6 +363,9 @@ def slurmify(config, epilog, constraint, walltime, memory, num_cpus, num_gpus,
 
         with open(script_out, 'w') as wf:
             wf.write(scripts[0])
+
+        os.chmod(script_out, EXECUTABLE_PERMISSIONS)
+
 
     # otherwise just send it out
     else:
