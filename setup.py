@@ -14,14 +14,14 @@ from setuptools import setup, find_packages
 
 setup(
     # package metadata
-    name="slurmpy",
+    name="slurmify",
     version="0.1-a",
     author="Samuel D. Lotz",
     author_email="samuel.lotz@salotz.info",
     description=("Submit jobs to slurm with python."),
     license="MIT",
-    keywords="cluster slurmpy",
-    url="https://github.com/salotz/slurmpy",
+    keywords="cluster slurm scheduler",
+    url="https://github.com/salotz/slurmify",
     long_description=open('README.org').read(),
     classifiers=[
         "Development Status :: 3 - Alpha",
@@ -35,14 +35,13 @@ setup(
     tests_require=['pytest', 'tox'],
     # package
     packages=find_packages('src'),
-    #packages=['slurmpy'],
     package_dir={'' : 'src'},
     # if this is true then the package_data won't be included in the
     # dist, and I prefer this to MANIFEST
     include_package_data=False,
-    package_data={'slurmpy' : ['templates/*.j2']},
+    package_data={'slurmify' : ['templates/*.j2']},
     entry_points={
-        'console_scripts': ['slurmpy = slurmpy.cli:cli']
+        'console_scripts': ['slurmify = slurmify.cli:cli']
         },
     install_requires=[
         'jinja2',

@@ -5,7 +5,7 @@ import subprocess
 
 from jinja2 import Environment, FileSystemLoader
 
-from slurmpy import TEMPLATES_PATH
+from slurmify import TEMPLATES_PATH
 
 # names of the templates
 SLURM_JOB_TEMPLATE = "slurm_job.sh.j2"

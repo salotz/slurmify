@@ -6,7 +6,7 @@ import stat
 import click
 import toml
 
-import slurmpy.slurmpy as slm
+import slurmify.slurmify as slm
 
 RUN_DEFAULTS = {
     'nodes' : 1,
@@ -371,41 +371,8 @@ def slurmify(config, epilog, constraint, walltime, memory, num_cpus, num_gpus,
     else:
         click.echo(scripts[0])
 
-@click.command()
-@click.argument('walltime')
-@click.argument('memory')
-@click.argument('num_cpus')
-@click.argument('job_name')
-@click.argument('command')
-def command(walltime, memory, num_cpus, job_name, command):
-    """Run a single command on a single node."""
 
-    sjob = slm.SlurmJob(job_name)
-
-    run_kwargs = {'walltime' : walltime,
-                  'memory' : memory,
-                  'num_cpus' : num_cpus,}
-
-    run_kwargs = _apply_run_defaults(run_kwargs)
-
-    jobid, completed_process = sjob.run(run_kwargs, [command])
-
-    click.echo("JOBID: {}".format(jobid))
-
-    # click.echo(click.style("JOBID: {}", fg='green').format(
-    #     click.style(jobid, fg='red', bold=True)))
-
-    click.echo(completed_process.stdout)
-    click.echo(completed_process.stderr)
-
-@click.group()
-def cli():
-    """ """
-    pass
-
-
-cli.add_command(command)
-cli.add_command(slurmify)
+cli = slurmify
 
 if __name__ == "__main__":
 
