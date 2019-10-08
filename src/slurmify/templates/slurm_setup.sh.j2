@@ -29,8 +29,7 @@ stderr="${logsdir}/${SLURM_JOB_NAME}.${SLURM_JOB_ID}.err"
 jobsdir=${goal_dir}/jobs
 
 # the directory for the output of this job
-jobname=${jobid}_${jobname}
-jobdir=${jobsdir}/${jobname}
+jobdir=${jobsdir}/${jobid}
 
 # the directory output will be put into after completion
 baseoutputdir=${jobdir}/output
@@ -45,7 +44,7 @@ done
 
 # directory to execute code in
 {% if exec_dir %}
-execdir={{ exec_dir }}/${jobname}
+execdir={{ exec_dir }}/${jobid}
 {% else %}
 execdir=${jobdir}
 {% endif %}
@@ -76,7 +75,7 @@ echo ""
 echo "JOBID ${jobid}" 
 echo "GOAL_DIR ${goal_dir}" 
 echo "INPUTDIR ${inputdir}" 
-echo "JOBSDIR ${jobsdir}" 
+echo "JOBSDIR ${jobsdir}"
 echo "JOBNAME ${jobname}" 
 echo "JOBDIR ${jobdir}" 
 echo "OUTPUTDIR ${outputdir}" 
@@ -158,7 +157,7 @@ echo ""
 
 # copy the actual submission script used (a self operation)
 echo "------------" 
-echo "Copying submission script ${goal_dir}/${jobname} to EXECDIR: $execdir" 
+echo "Copying submission script to EXECDIR: $execdir" 
 echo "------------" 
 cp "${0}" ${execdir}/ 
 echo "" 
